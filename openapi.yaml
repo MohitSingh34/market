@@ -1,0 +1,118 @@
+openapi: 3.0.0
+info:
+  title: Market Simulation API
+  version: 1.0.0
+paths:
+  /shops:
+    get:
+      summary: List all shops
+      responses:
+        '200':
+          description: A list of shops
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Shop'
+    post:
+      summary: Create a new shop
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateShopRequest'
+      responses:
+        '201':
+          description: Shop created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Shop'
+  /simulate/seed:
+    post:
+      summary: Reset and seed the simulation
+      parameters:
+        - in: query
+          name: seed
+          schema:
+            type: integer
+          required: true
+          description: Deterministic seed
+      responses:
+        '200':
+          description: Simulation seeded
+  /simulate/snapshot:
+    post:
+      summary: Create a snapshot of the current state
+      responses:
+        '200':
+          description: Snapshot created
+  /simulate/load:
+    post:
+      summary: Load a snapshot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                snapshotId:
+                  type: string
+      responses:
+        '200':
+          description: Snapshot loaded
+
+components:
+  schemas:
+    Shop:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        position:
+          type: object
+          properties:
+            x:
+              type: integer
+            y:
+              type: integer
+        balance:
+          type: number
+    CreateShopRequest:
+      type: object
+      required:
+        - name
+        - type
+        - position
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        position:
+          type: object
+          properties:
+            x:
+              type: integer
+            y:
+              type: integer
+        initial_inventory:
+          type: array
+          items:
+            type: object
+            properties:
+              item_id:
+                type: string
+              qty:
+                type: integer
+        workers:
+          type: integer
+        balance:
+          type: number

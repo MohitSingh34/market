@@ -1,0 +1,23 @@
+
+# === Node.js / Web Dev Defaults ===
+node_modules/
+.env
+.idx
+dist/
+build/
+.cache/
+.next/
+.vscode/
+*.log
+*.env
+*.local
+coverage/
+.DS_Store
+*.swp
+*.bak
+*.tmp
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.idea/
+

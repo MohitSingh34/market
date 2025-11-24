@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Shop {
+  id             String   @id @default(uuid())
+  name           String
+  type           String
+  x              Int
+  y              Int
+  balance        Float    @default(0)
+  reputation     Float    @default(100)
+  inventory      ShopItem[]
+  transactions   Transaction[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Item {
+  id              String   @id
+  name            String
+  baseCost        Float
+  basePrice       Float
+  processingTime  Int      @default(0)
+  perishability   Int?
+  components      ItemComponent[] @relation("ParentItem")
+  usedIn          ItemComponent[] @relation("ComponentItem")
+  shopItems       ShopItem[]
+  agentItems      AgentItem[]
+}
+
+model ItemComponent {
+  parentId    String
+  componentId String
+  quantity    Int
+  parent      Item   @relation("ParentItem", fields: [parentId], references: [id])
+  component   Item   @relation("ComponentItem", fields: [componentId], references: [id])
+
+  @@id([parentId, componentId])
+}
+
+model ShopItem {
+  shopId    String
+  itemId    String
+  quantity  Int      @default(0)
+  price     Float
+  shop      Shop     @relation(fields: [shopId], references: [id])
+  item      Item     @relation(fields: [itemId], references: [id])
+
+  @@id([shopId, itemId])
+}
+
+model Agent {
+  id        String   @id @default(uuid())
+  role      String
+  x         Int
+  y         Int
+  wallet    Float    @default(0)
+  hunger    Float    @default(0)
+  fatigue   Float    @default(0)
+  state     String   @default("IDLE")
+  inventory AgentItem[]
+}
+
+model AgentItem {
+  agentId   String
+  itemId    String
+  quantity  Int
+  agent     Agent    @relation(fields: [agentId], references: [id])
+  item      Item     @relation(fields: [itemId], references: [id])
+
+  @@id([agentId, itemId])
+}
+
+model Transaction {
+  id        String   @id @default(uuid())
+  shopId    String
+  agentId   String?  // Nullable if B2B
+  itemId    String
+  quantity  Int
+  unitPrice Float
+  total     Float
+  tick      Int
+  timestamp DateTime @default(now())
+  shop      Shop     @relation(fields: [shopId], references: [id])
+}
+
+model SimulationEvent {
+  id        String   @id @default(uuid())
+  type      String
+  payload   Json
+  tick      Int
+  createdAt DateTime @default(now())
+}
