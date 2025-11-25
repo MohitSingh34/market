@@ -51,13 +51,23 @@ async function main() {
 
     // 2. Create Shops
     for (let i = 0; i < numShops; i++) {
-        await prisma.shop.create({
+        const shop = await prisma.shop.create({
             data: {
                 name: `Shop ${i + 1}`,
                 type: 'general',
                 x: Math.floor(rng() * 800),
                 y: Math.floor(rng() * 600),
                 balance: 1000,
+            }
+        });
+
+        // Add initial inventory (Bread)
+        await prisma.shopItem.create({
+            data: {
+                shopId: shop.id,
+                itemId: 'bread',
+                quantity: 50,
+                price: 50, // Base price
             }
         });
     }

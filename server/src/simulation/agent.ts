@@ -47,7 +47,7 @@ export class Agent {
                 this.handleTraveling();
                 break;
             case AgentState.BUYING:
-                this.handleBuying();
+                this.handleBuying(shops);
                 break;
             case AgentState.WORKING:
                 this.handleWorking();
@@ -125,10 +125,34 @@ export class Agent {
         }
     }
 
-    private handleBuying() {
-        // Simulate buying
-        this.data.needs.hunger = Math.max(0, this.data.needs.hunger - 30);
-        this.data.wallet -= 10;
+    private handleBuying(shops: Map<string, any>) {
+        if (!this.data.targetShopId) {
+            this.data.state = AgentState.IDLE;
+            return;
+        }
+
+        const shop = shops.get(this.data.targetShopId);
+        if (!shop) {
+            this.data.state = AgentState.IDLE;
+            return;
+        }
+
+        // Find 'bread'
+        const bread = shop.inventory.find((i: any) => i.itemId === 'bread');
+
+        if (bread && bread.quantity > 0 && this.data.wallet >= bread.price) {
+            // Buy
+            bread.quantity--;
+            shop.balance += bread.price;
+            this.data.wallet -= bread.price;
+            this.data.needs.hunger = Math.max(0, this.data.needs.hunger - 30);
+
+            // console.log(`Agent ${this.data.id} bought bread from ${shop.name} for ${bread.price}`);
+        } else {
+            // Failed to buy (out of stock or too expensive)
+            // console.log(`Agent ${this.data.id} failed to buy from ${shop.name}`);
+        }
+
         this.data.targetShopId = undefined;
         this.data.state = AgentState.IDLE;
     }

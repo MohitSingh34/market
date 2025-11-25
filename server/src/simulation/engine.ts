@@ -66,8 +66,10 @@ export class SimulationEngine {
             this.agents.set(agent.data.id, agent);
         }
 
-        // Load shops from DB
-        const shopsData = await this.prisma.shop.findMany();
+        // Load shops from DB with inventory
+        const shopsData = await this.prisma.shop.findMany({
+            include: { inventory: true }
+        });
         for (const shop of shopsData) {
             this.shops.set(shop.id, shop);
         }
@@ -104,7 +106,10 @@ export class SimulationEngine {
     private async tick() {
         this.currentTick++;
 
-        // 1. Update Agents
+        // 1. Update Shops (Auto-restock & Price Dynamics)
+        this.updateShops();
+
+        // 2. Update Agents
         const agentUpdates: any[] = [];
         for (const agent of this.agents.values()) {
             agent.update(this.currentTick, this.shops, () => this.rng());
@@ -116,12 +121,52 @@ export class SimulationEngine {
             });
         }
 
-        // 2. Broadcast State
+        // 3. Broadcast State
         this.broadcast({
             type: 'tick',
             tick: this.currentTick,
             agents: agentUpdates,
+            shops: Array.from(this.shops.values()), // Broadcast shop updates (inventory/price)
         });
+    }
+
+    private updateShops() {
+        for (const shop of this.shops.values()) {
+            // Check inventory for 'bread'
+            let bread = shop.inventory.find((i: any) => i.itemId === 'bread');
+
+            if (!bread) {
+                // Initialize if missing (shouldn't happen with seeded data but good for safety)
+                bread = { itemId: 'bread', quantity: 0, price: 50 };
+                shop.inventory.push(bread);
+            }
+
+            // Auto-restock if low
+            if (bread.quantity < 10) {
+                const restockAmount = 50;
+                const cost = restockAmount * 20; // Wholesale cost
+                if (shop.balance >= cost) {
+                    bread.quantity += restockAmount;
+                    shop.balance -= cost;
+                    // console.log(`Shop ${shop.name} restocked bread. Balance: ${shop.balance}`);
+                }
+            }
+
+            // Price Dynamics (Simple Supply/Demand)
+            // Base price 50. 
+            // If quantity < 20, price increases.
+            // If quantity > 80, price decreases.
+            const basePrice = 50;
+            if (bread.quantity < 20) {
+                bread.price = Math.min(100, bread.price + 1);
+            } else if (bread.quantity > 80) {
+                bread.price = Math.max(10, bread.price - 1);
+            } else {
+                // Tend towards base price
+                if (bread.price > basePrice) bread.price -= 0.5;
+                if (bread.price < basePrice) bread.price += 0.5;
+            }
+        }
     }
 
     private broadcast(data: any) {

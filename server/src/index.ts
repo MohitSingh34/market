@@ -18,6 +18,11 @@ server.get('/', async (request, reply) => {
 
 server.register(async function (fastify) {
     fastify.get('/realtime', { websocket: true }, (connection: any, req: any) => {
+        console.log('WebSocket connection received. Keys:', Object.keys(connection));
+        if (!connection.socket) {
+            console.error('Connection.socket is undefined!');
+            return;
+        }
         engine.addClient(connection);
         connection.socket.on('close', () => {
             engine.removeClient(connection);
@@ -40,6 +45,16 @@ server.post('/shops', async (request, reply) => {
             x: body.position.x,
             y: body.position.y,
             balance: body.balance || 1000,
+            inventory: {
+                create: {
+                    itemId: 'bread',
+                    quantity: 50,
+                    price: 50
+                }
+            }
+        },
+        include: {
+            inventory: true
         }
     });
 
