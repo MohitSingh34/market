@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Stage, Layer, Circle, Rect, Text } from 'react-konva';
 import AddShopModal from './AddShopModal';
+import ControlPanel from './ControlPanel';
 
 interface Agent {
     id: string;
@@ -26,6 +27,9 @@ export default function MapCanvas() {
     const [tick, setTick] = useState(0);
     const [showAddShop, setShowAddShop] = useState(false);
     const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+    const [speed, setSpeed] = useState(1);
+    const [isPaused, setIsPaused] = useState(false);
+    const [wsStatus, setWsStatus] = useState('Connecting...');
     const wsRef = useRef<WebSocket | null>(null);
 
     // Handle window resize
@@ -60,11 +64,12 @@ export default function MapCanvas() {
 
         ws.onopen = () => {
             console.log('WebSocket connected');
+            setWsStatus('Connected');
         };
 
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
-
+            // ... (rest of logic)
             if (data.type === 'initial_state') {
                 setTick(data.tick);
                 setAgents(data.agents);
@@ -90,10 +95,12 @@ export default function MapCanvas() {
 
         ws.onerror = (error) => {
             console.error('WebSocket error:', error);
+            setWsStatus('Error');
         };
 
         ws.onclose = () => {
             console.log('WebSocket disconnected');
+            setWsStatus('Disconnected');
         };
 
         return () => {
@@ -106,25 +113,45 @@ export default function MapCanvas() {
         console.log('Shop added:', shop);
     };
 
+    const handleTogglePause = () => {
+        setIsPaused(!isPaused);
+        // TODO: Implement API call for pause/resume
+    };
+
     return (
         <div className="relative w-full h-screen bg-slate-900">
             {/* Header */}
-            <div className="absolute top-4 left-4 z-10 flex gap-4">
-                <div className="bg-slate-800 px-4 py-2 rounded-lg shadow-lg border border-slate-700">
-                    <p className="text-white font-mono text-sm">
-                        <span className="text-slate-400">Tick:</span> <span className="text-green-400 font-bold">{tick}</span>
-                    </p>
+            <div className="absolute top-4 left-4 z-10 flex flex-col gap-4">
+                <div className="flex gap-4">
+                    <div className="bg-slate-800 px-4 py-2 rounded-lg shadow-lg border border-slate-700">
+                        <p className="text-white font-mono text-sm">
+                            <span className="text-slate-400">Tick:</span> <span className="text-green-400 font-bold">{tick}</span>
+                        </p>
+                    </div>
+                    <div className="bg-slate-800 px-4 py-2 rounded-lg shadow-lg border border-slate-700">
+                        <p className="text-white font-mono text-sm">
+                            <span className="text-slate-400">Agents:</span> <span className="text-blue-400 font-bold">{agents.length}</span>
+                        </p>
+                    </div>
+                    <div className="bg-slate-800 px-4 py-2 rounded-lg shadow-lg border border-slate-700">
+                        <p className="text-white font-mono text-sm">
+                            <span className="text-slate-400">Shops:</span> <span className="text-purple-400 font-bold">{shops.length}</span>
+                        </p>
+                    </div>
+                    <div className="bg-slate-800 px-4 py-2 rounded-lg shadow-lg border border-slate-700">
+                        <p className="text-white font-mono text-sm">
+                            <span className="text-slate-400">WS:</span> <span className={`font-bold ${wsStatus === 'Connected' ? 'text-green-400' : 'text-red-400'}`}>{wsStatus}</span>
+                        </p>
+                    </div>
                 </div>
-                <div className="bg-slate-800 px-4 py-2 rounded-lg shadow-lg border border-slate-700">
-                    <p className="text-white font-mono text-sm">
-                        <span className="text-slate-400">Agents:</span> <span className="text-blue-400 font-bold">{agents.length}</span>
-                    </p>
-                </div>
-                <div className="bg-slate-800 px-4 py-2 rounded-lg shadow-lg border border-slate-700">
-                    <p className="text-white font-mono text-sm">
-                        <span className="text-slate-400">Shops:</span> <span className="text-purple-400 font-bold">{shops.length}</span>
-                    </p>
-                </div>
+
+                {/* Control Panel */}
+                <ControlPanel
+                    isPaused={isPaused}
+                    onTogglePause={handleTogglePause}
+                    speed={speed}
+                    onSpeedChange={setSpeed}
+                />
             </div>
 
             {/* Add Shop Button */}

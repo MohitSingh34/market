@@ -19,8 +19,8 @@ export default function ControlPanel({ isPaused, onTogglePause, speed, onSpeedCh
                 <button
                     onClick={onTogglePause}
                     className={`px-4 py-2 rounded-md font-medium transition ${isPaused
-                            ? 'bg-green-600 hover:bg-green-700 text-white'
-                            : 'bg-yellow-600 hover:bg-yellow-700 text-white'
+                        ? 'bg-green-600 hover:bg-green-700 text-white'
+                        : 'bg-yellow-600 hover:bg-yellow-700 text-white'
                         }`}
                 >
                     {isPaused ? '▶ Play' : '⏸ Pause'}
@@ -37,7 +37,16 @@ export default function ControlPanel({ isPaused, onTogglePause, speed, onSpeedCh
                         max="4"
                         step="0.5"
                         value={speed}
-                        onChange={(e) => onSpeedChange(parseFloat(e.target.value))}
+                        onChange={(e) => {
+                            const newSpeed = parseFloat(e.target.value);
+                            onSpeedChange(newSpeed);
+                            // Call API
+                            fetch('http://localhost:3001/simulation/speed', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ speed: newSpeed }),
+                            }).catch(err => console.error('Failed to set speed:', err));
+                        }}
                         className="w-full"
                     />
                     <div className="flex justify-between text-xs text-slate-500 mt-1">

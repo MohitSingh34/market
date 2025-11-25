@@ -69,6 +69,16 @@ server.get('/agents', async (request, reply) => {
     return agents;
 });
 
+server.post('/simulation/speed', async (request, reply) => {
+    const body = request.body as any;
+    const speed = parseFloat(body.speed);
+    if (speed > 0) {
+        engine.setSpeed(speed);
+        return { status: 'ok', speed };
+    }
+    return reply.code(400).send({ error: 'Invalid speed' });
+});
+
 const start = async () => {
     try {
         await server.listen({ port: 3001, host: '0.0.0.0' });

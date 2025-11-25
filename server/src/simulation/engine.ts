@@ -4,6 +4,8 @@ import { Agent, AgentState } from './agent';
 
 const TICK_RATE = 500; // ms
 
+
+
 export class SimulationEngine {
     public currentTick: number = 0;
     private running: boolean = false;
@@ -12,10 +14,20 @@ export class SimulationEngine {
     private rng: seedrandom.PRNG;
     private agents: Map<string, Agent> = new Map();
     private shops: Map<string, any> = new Map();
+    private tickRate: number = 500;
+    private baseTickRate: number = 500;
 
     constructor(seed: string = '12345') {
         this.prisma = new PrismaClient();
         this.rng = seedrandom(seed);
+    }
+
+    public setSpeed(speed: number) {
+        // Speed 1x = 500ms
+        // Speed 2x = 250ms
+        // Speed 0.5x = 1000ms
+        this.tickRate = this.baseTickRate / speed;
+        console.log(`Simulation speed set to ${speed}x (Tick rate: ${this.tickRate}ms)`);
     }
 
     public async start() {
@@ -25,7 +37,7 @@ export class SimulationEngine {
         await this.loadState();
 
         this.running = true;
-        this.loop();
+        this.loop().catch(err => console.error('Simulation loop failed:', err));
     }
 
     public stop() {
@@ -33,12 +45,14 @@ export class SimulationEngine {
     }
 
     public addClient(connection: any) {
+        console.log('Adding client. Total clients:', this.clients.size + 1);
         this.clients.add(connection);
         // Send initial state to new client
         this.sendInitialState(connection);
     }
 
     public removeClient(connection: any) {
+        console.log('Removing client. Total clients:', this.clients.size - 1);
         this.clients.delete(connection);
     }
 
@@ -95,10 +109,14 @@ export class SimulationEngine {
 
         const start = Date.now();
 
-        await this.tick();
+        try {
+            await this.tick();
+        } catch (error) {
+            console.error('Error in simulation tick:', error);
+        }
 
         const elapsed = Date.now() - start;
-        const delay = Math.max(0, TICK_RATE - elapsed);
+        const delay = Math.max(0, this.tickRate - elapsed);
 
         setTimeout(() => this.loop(), delay);
     }
@@ -171,9 +189,14 @@ export class SimulationEngine {
 
     private broadcast(data: any) {
         const msg = JSON.stringify(data);
+        if (this.clients.size > 0) {
+            // console.log(`Broadcasting to ${this.clients.size} clients`);
+        }
         for (const client of this.clients) {
             if (client.socket.readyState === 1) {
                 client.socket.send(msg);
+            } else {
+                console.log(`Client socket not open: ${client.socket.readyState}`);
             }
         }
     }

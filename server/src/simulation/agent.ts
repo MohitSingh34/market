@@ -1,5 +1,6 @@
 export enum AgentState {
     IDLE = 'IDLE',
+    WANDERING = 'WANDERING',
     SEARCHING = 'SEARCHING',
     TRAVELING = 'TRAVELING',
     BUYING = 'BUYING',
@@ -38,7 +39,11 @@ export class Agent {
         // FSM Logic
         switch (this.data.state) {
             case AgentState.IDLE:
-                this.handleIdle(shops, rng);
+                // Default to wandering now
+                this.data.state = AgentState.WANDERING;
+                break;
+            case AgentState.WANDERING:
+                this.handleWandering(tick, shops, rng);
                 break;
             case AgentState.SEARCHING:
                 this.handleSearching(shops, rng);
@@ -55,6 +60,41 @@ export class Agent {
             case AgentState.RESTING:
                 this.handleResting();
                 break;
+        }
+    }
+
+    private handleWandering(tick: number, shops: Map<string, any>, rng: () => number) {
+        // Change direction every 20 ticks (approx 10s at 1x speed)
+        if (tick % 20 === 0 || !this.data.targetX) {
+            this.data.targetX = Math.floor(rng() * 800);
+            this.data.targetY = Math.floor(rng() * 600);
+        }
+
+        // Move towards target
+        if (this.data.targetX && this.data.targetY) {
+            const dx = this.data.targetX - this.data.x;
+            const dy = this.data.targetY - this.data.y;
+            const dist = Math.hypot(dx, dy);
+
+            if (dist > 5) {
+                const speed = 2;
+                this.data.x += (dx / dist) * speed;
+                this.data.y += (dy / dist) * speed;
+            }
+        }
+
+        // Check for nearby shops
+        for (const shop of shops.values()) {
+            const dist = Math.hypot(shop.x - this.data.x, shop.y - this.data.y);
+            if (dist < 50) {
+                // Encountered a shop!
+                this.data.targetShopId = shop.id;
+                this.data.targetX = shop.x;
+                this.data.targetY = shop.y;
+                this.data.state = AgentState.TRAVELING; // Go to center
+                // console.log(`Agent ${this.data.id} encountered shop ${shop.name}`);
+                break;
+            }
         }
     }
 
@@ -147,10 +187,10 @@ export class Agent {
             this.data.wallet -= bread.price;
             this.data.needs.hunger = Math.max(0, this.data.needs.hunger - 30);
 
-            // console.log(`Agent ${this.data.id} bought bread from ${shop.name} for ${bread.price}`);
+            console.log(`Agent ${this.data.id} bought bread from ${shop.name} for ${bread.price}`);
         } else {
             // Failed to buy (out of stock or too expensive)
-            // console.log(`Agent ${this.data.id} failed to buy from ${shop.name}`);
+            console.log(`Agent ${this.data.id} failed to buy from ${shop.name}`);
         }
 
         this.data.targetShopId = undefined;
